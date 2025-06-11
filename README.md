@@ -1,6 +1,6 @@
 # 🎮 FlowLearning - Plataforma de Aprendizado Gamificada
 
-Sistema completo de aprendizado de idiomas com gamificação, desenvolvido com tecnologias modernas.
+Sistema completo de aprendizado de idiomas com gamificação.
 
 ## 🏗️ Arquitetura
 
