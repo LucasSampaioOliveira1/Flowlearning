@@ -1,0 +1,171 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  password     String
+  name         String
+  avatar       String?   // Avatar do usuário
+  totalXp      Int       @default(0)
+  currentLevel Int       @default(1)
+  streak       Int       @default(0) // Sequência de dias consecutivos
+  hearts       Int       @default(5) // Sistema de vidas (como Duolingo)
+  gems         Int       @default(0) // Moeda virtual
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  progress     UserProgress[]
+  dailyLogins  DailyLogin[]
+  achievements UserAchievement[]
+
+  @@map("users")
+}
+
+model Unit {
+  id          Int     @id @default(autoincrement())
+  title       String
+  description String
+  order       Int     @unique // Para garantir ordem única
+  color       String  @default("#3B82F6") // Cor hex padrão
+  icon        String? // Ícone da unidade
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lessons     Lesson[]
+
+  @@map("units")
+}
+
+model Lesson {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?  // Descrição da lição
+  content     String   @db.Text
+  order       Int
+  xpReward    Int      @default(10)
+  difficulty  String   @default("easy") // easy, medium, hard
+  type        String   @default("grammar") // grammar, vocabulary, listening, speaking
+  duration    Int      @default(5) // Duração estimada em minutos
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  unitId      Int
+  unit        Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  quizzes     Quiz[]
+  progress    UserProgress[]
+
+  @@unique([unitId, order]) // Garantir ordem única por unidade
+  @@map("lessons")
+}
+
+model Quiz {
+  id            Int      @id @default(autoincrement())
+  question      String   @db.Text
+  options       Json     // Array de opções
+  correctAnswer String
+  explanation   String?  @db.Text // Explicação da resposta
+  type          String   @default("multiple_choice") // multiple_choice, fill_blank, audio, speaking
+  order         Int
+  points        Int      @default(1) // Pontos por acertar
+  audioUrl      String?  // URL do áudio (se aplicável)
+  imageUrl      String?  // URL da imagem (se aplicável)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lessonId      Int
+  lesson        Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, order]) // Garantir ordem única por lição
+  @@map("quizzes")
+}
+
+model UserProgress {
+  id             Int       @id @default(autoincrement())
+  status         String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED, PERFECT
+  correctAnswers Int       @default(0)
+  wrongAnswers   Int       @default(0)
+  xpEarned       Int       @default(0)
+  scorePercentage Float    @default(0) // Percentual de acerto
+  timeSpent      Int       @default(0) // Tempo gasto em segundos
+  attempts       Int       @default(1) // Número de tentativas
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  userId         Int
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId       Int
+  lesson         Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("user_progress")
+}
+
+model DailyLogin {
+  id        Int      @id @default(autoincrement())
+  loginDate DateTime @db.Date
+  xpBonus   Int      @default(0) // XP bônus por login diário
+  streakDay Int      @default(1) // Dia da sequência
+  createdAt DateTime @default(now())
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, loginDate])
+  @@map("daily_logins")
+}
+
+model Achievement {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String
+  icon        String
+  type        String   // streak, xp, lessons, perfect_score
+  target      Int      // Meta para conquistar (ex: 7 para 7 dias de streak)
+  xpReward    Int      @default(0)
+  gemsReward  Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id          Int      @id @default(autoincrement())
+  unlockedAt  DateTime @default(now())
+  progress    Int      @default(0) // Progresso atual para a conquista
+
+  userId        Int
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId Int
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+// Tabela para configurações do sistema
+model SystemConfig {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String @db.Text
+  
+  @@map("system_config")
+}

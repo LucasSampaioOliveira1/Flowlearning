@@ -1,0 +1,140 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AuthUser {
+  id: Int!
+  email: String!
+  name: String!
+  totalXp: Int!
+  currentLevel: Int!
+  createdAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type AuthResponse {
+  user: AuthUser!
+  token: String!
+}
+
+type User {
+  id: Int!
+  email: String!
+  name: String!
+  avatar: String
+  totalXp: Int!
+  currentLevel: Int!
+  streak: Int!
+  hearts: Int!
+  gems: Int!
+  isActive: Boolean!
+  lastLoginAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Unit {
+  id: Int!
+  title: String!
+  description: String!
+  order: Int!
+  color: String!
+  icon: String
+  isActive: Boolean!
+  isLocked: Boolean!
+  createdAt: DateTime!
+  lessons: [Lesson!]!
+}
+
+type UserProgress {
+  id: Int!
+  status: String!
+  correctAnswers: Int!
+  wrongAnswers: Int!
+  xpEarned: Int!
+  scorePercentage: Float!
+  timeSpent: Int!
+  attempts: Int!
+  completedAt: DateTime
+  createdAt: DateTime!
+}
+
+type Quiz {
+  id: Int!
+  question: String!
+  type: String!
+  options: [String!]!
+  explanation: String
+  order: Int!
+  points: Int!
+  audioUrl: String
+  imageUrl: String
+  lessonId: Int!
+}
+
+type Lesson {
+  id: Int!
+  title: String!
+  description: String
+  content: String!
+  order: Int!
+  xpReward: Int!
+  difficulty: String!
+  type: String!
+  duration: Int!
+  isActive: Boolean!
+  isCompleted: Boolean!
+  scorePercentage: Float!
+  unitId: Int!
+  unit: Unit!
+  quizzes: [Quiz!]
+  userProgress: UserProgress
+}
+
+type LessonResult {
+  status: String!
+  scorePercentage: Int!
+  xpEarned: Int!
+  correctAnswers: Int!
+  totalQuizzes: Int!
+  earnedPoints: Int!
+  totalPoints: Int!
+  isNewRecord: Boolean!
+}
+
+type Query {
+  me: User!
+  getUnits: [Unit!]!
+  getLesson(lessonId: Int!): Lesson!
+}
+
+type Mutation {
+  login(input: LoginInput!): AuthResponse!
+  register(input: RegisterInput!): AuthResponse!
+  completeLesson(input: CompleteLessonInput!): LessonResult!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input RegisterInput {
+  email: String!
+  password: String!
+  name: String!
+}
+
+input CompleteLessonInput {
+  lessonId: Int!
+  answers: [CompleteQuizInput!]!
+}
+
+input CompleteQuizInput {
+  quizId: Int!
+  userAnswer: String!
+}
