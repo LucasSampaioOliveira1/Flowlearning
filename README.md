@@ -7,7 +7,7 @@ Sistema completo de aprendizado de idiomas com gamificação.
 ### 🔧 Backend (flowlearning-backend/)
 - **NestJS** + **TypeScript**
 - **GraphQL** + **Apollo Server**
-- **Prisma** + **PostgreSQL**
+- **Prisma** + **MySQL**
 - **JWT** Authentication
 - **Sistema de Gamificação**
 
