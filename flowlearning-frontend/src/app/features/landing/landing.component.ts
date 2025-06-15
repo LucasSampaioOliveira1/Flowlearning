@@ -36,15 +36,15 @@ import { MatIconModule } from '@angular/material/icon';
 
             <!-- Navigation -->
             <nav class="hidden md:flex space-x-8">
-              <a href="#features" class="text-white/80 hover:text-white transition-colors cursor-pointer">
+              <button (click)="goToResources()" class="text-white/80 hover:text-white transition-colors cursor-pointer">
                 Recursos
-              </a>
-              <a href="#how-it-works" class="text-white/80 hover:text-white transition-colors cursor-pointer">
+              </button>
+              <button (click)="goToHowItWorks()" class="text-white/80 hover:text-white transition-colors cursor-pointer">
                 Como Funciona
-              </a>
-              <a href="#pricing" class="text-white/80 hover:text-white transition-colors cursor-pointer">
+              </button>
+              <button (click)="goToPricing()" class="text-white/80 hover:text-white transition-colors cursor-pointer">
                 Preços
-              </a>
+              </button>
             </nav>
 
             <!-- Auth Buttons -->
@@ -321,6 +321,18 @@ export class LandingComponent {
 
   goToRegister() {
     this.router.navigate(['/register']);
+  }
+
+  goToPricing() {
+    this.router.navigate(['/pricing']);
+  }
+
+  goToHowItWorks() {
+    this.router.navigate(['/how-it-works']);
+  }
+
+  goToResources() {
+    this.router.navigate(['/resources']);
   }
 
   scrollToDemo() {
