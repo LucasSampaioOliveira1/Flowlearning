@@ -1,7 +1,7 @@
 import { ObjectType, Field, InputType, Int } from '@nestjs/graphql';
 
 @ObjectType()
-export class AuthUser {  // ← Mudança aqui: de User para AuthUser
+export class AuthUser {
   @Field(() => Int)
   id: number;
 
@@ -23,7 +23,7 @@ export class AuthUser {  // ← Mudança aqui: de User para AuthUser
 
 @ObjectType()
 export class AuthResponse {
-  @Field(() => AuthUser)  // ← Mudança aqui: usar AuthUser
+  @Field(() => AuthUser)
   user: AuthUser;
 
   @Field()
@@ -33,13 +33,13 @@ export class AuthResponse {
 @InputType()
 export class RegisterInput {
   @Field()
+  name: string;
+
+  @Field()
   email: string;
 
   @Field()
   password: string;
-
-  @Field()
-  name: string;
 }
 
 @InputType()

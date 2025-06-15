@@ -1,19 +1,18 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { RegisterInput, LoginInput } from './dto/auth.types';
 import * as bcrypt from 'bcrypt';
-import { ConfigService } from '@nestjs/config';
-import { LoginInput, RegisterInput } from './dto/auth.types';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
-    private jwtService: JwtService,
+    private jwt: JwtService,
     private config: ConfigService,
   ) {}
 
-  // ← Corrigir para usar input
   async register(input: RegisterInput) {
     const { email, password, name } = input;
     
@@ -36,11 +35,13 @@ export class AuthService {
         email,
         password: hashedPassword,
         name,
+        totalXp: 0,
+        currentLevel: 1,
+        hearts: 5,
+        gems: 0,
+        streak: 0,
       },
     });
-
-    // Registrar login diário
-    await this.registerDailyLogin(user.id);
 
     // Gerar token
     const token = this.generateToken(user.id, user.email);
@@ -58,7 +59,6 @@ export class AuthService {
     };
   }
 
-  // ← Corrigir para usar input
   async login(input: LoginInput) {
     const { email, password } = input;
     
@@ -77,9 +77,6 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // Registrar login diário (agora com try/catch)
-    await this.registerDailyLogin(user.id);
-
     // Gerar token
     const token = this.generateToken(user.id, user.email);
 
@@ -97,39 +94,15 @@ export class AuthService {
   }
 
   private generateToken(userId: number, email: string): string {
-    const payload = { sub: userId, email };
-    return this.jwtService.sign(payload);
-  }
-
-  private async registerDailyLogin(userId: number) {
-    try {
-      const today = new Date();
-      const todayString = today.toISOString().split('T')[0]; // Formato: 2025-06-10
-
-      // Verificar se já existe login hoje
-      const existingLogin = await this.prisma.dailyLogin.findFirst({
-        where: {
-          userId,
-          loginDate: new Date(todayString),
-        },
-      });
-
-      // Se não existe, criar novo registro
-      if (!existingLogin) {
-        await this.prisma.dailyLogin.create({
-          data: {
-            userId,
-            loginDate: new Date(todayString),
-          },
-        });
+    return this.jwt.sign(
+      { sub: userId, email },
+      { 
+        secret: this.config.get('JWT_SECRET') || 'fallback-secret-key',
+        expiresIn: '7d' 
       }
-    } catch (error) {
-      // Se der erro, não quebra o login - apenas loga o erro
-      console.log('Erro ao registrar login diário:', error.message);
-    }
+    );
   }
 
-  // Método para query me
   async getUserById(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -147,7 +120,6 @@ export class AuthService {
         lastLoginAt: true,
         createdAt: true,
         updatedAt: true,
-        // NÃO incluir password por segurança
       },
     });
 

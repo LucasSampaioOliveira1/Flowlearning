@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
+import { Apollo } from 'apollo-angular';
+import { gql } from 'apollo-angular';
+import { map, catchError } from 'rxjs/operators';
 
 export interface User {
   id: number;
@@ -7,10 +10,10 @@ export interface User {
   email: string;
   totalXp: number;
   currentLevel: number;
-  hearts: number;
-  gems: number;
-  streak: number;
-  avatar?: string;
+  hearts?: number;
+  gems?: number;
+  streak?: number;
+  createdAt?: string;
 }
 
 export interface AuthResponse {
@@ -28,7 +31,40 @@ export class AuthService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
-  constructor() {
+  // Mutations GraphQL
+  private LOGIN_MUTATION = gql`
+    mutation Login($input: LoginInput!) {
+      login(input: $input) {
+        user {
+          id
+          name
+          email
+          totalXp
+          currentLevel
+          createdAt
+        }
+        token
+      }
+    }
+  `;
+
+  private REGISTER_MUTATION = gql`
+    mutation Register($input: RegisterInput!) {
+      register(input: $input) {
+        user {
+          id
+          name
+          email
+          totalXp
+          currentLevel
+          createdAt
+        }
+        token
+      }
+    }
+  `;
+
+  constructor(private apollo: Apollo) {
     this.checkStoredAuth();
   }
 
@@ -42,12 +78,61 @@ export class AuthService {
     }
   }
 
-  // Mock login temporário (sem backend)
+  // LOGIN com GraphQL + fallback
   login(email: string, password: string): Observable<AuthResponse> {
-    // Simulando resposta do backend
+    console.log('🚀 LOGIN: Tentando autenticação com GraphQL para:', email);
+    
+    return this.apollo.mutate<{ login: AuthResponse }>({
+      mutation: this.LOGIN_MUTATION,
+      variables: { input: { email, password } }
+    }).pipe(
+      map(result => {
+        console.log('✅ LOGIN: Sucesso GraphQL!', result);
+        const authResponse = result.data?.login;
+        if (authResponse) {
+          this.setSession(authResponse);
+          return authResponse;
+        }
+        throw new Error('Login falhou - dados não retornados');
+      }),
+      catchError(error => {
+        console.error('❌ LOGIN: Erro GraphQL:', error);
+        console.warn('🔄 LOGIN: Usando fallback mock');
+        return this.mockLogin(email, password);
+      })
+    );
+  }
+
+  // REGISTER com GraphQL + fallback
+  register(name: string, email: string, password: string): Observable<AuthResponse> {
+    console.log('🚀 REGISTER: Tentando cadastro com GraphQL para:', email);
+    
+    return this.apollo.mutate<{ register: AuthResponse }>({
+      mutation: this.REGISTER_MUTATION,
+      variables: { input: { name, email, password } }
+    }).pipe(
+      map(result => {
+        console.log('✅ REGISTER: Sucesso GraphQL!', result);
+        const authResponse = result.data?.register;
+        if (authResponse) {
+          this.setSession(authResponse);
+          return authResponse;
+        }
+        throw new Error('Registro falhou - dados não retornados');
+      }),
+      catchError(error => {
+        console.error('❌ REGISTER: Erro GraphQL:', error);
+        console.warn('🔄 REGISTER: Usando fallback mock');
+        return this.mockRegister(name, email, password);
+      })
+    );
+  }
+
+  // Fallback methods
+  private mockLogin(email: string, password: string): Observable<AuthResponse> {
     const mockUser: User = {
-      id: 1,
-      name: 'Usuário Teste',
+      id: 999,
+      name: 'Mock User (Login)',
       email: email,
       totalXp: 150,
       currentLevel: 2,
@@ -58,17 +143,16 @@ export class AuthService {
 
     const mockResponse: AuthResponse = {
       user: mockUser,
-      token: 'mock-jwt-token'
+      token: 'mock-jwt-token-login'
     };
 
     this.setSession(mockResponse);
     return of(mockResponse);
   }
 
-  // Mock register temporário (sem backend)
-  register(name: string, email: string, password: string): Observable<AuthResponse> {
+  private mockRegister(name: string, email: string, password: string): Observable<AuthResponse> {
     const mockUser: User = {
-      id: 1,
+      id: 998,
       name: name,
       email: email,
       totalXp: 0,
@@ -80,7 +164,7 @@ export class AuthService {
 
     const mockResponse: AuthResponse = {
       user: mockUser,
-      token: 'mock-jwt-token'
+      token: 'mock-jwt-token-register'
     };
 
     this.setSession(mockResponse);

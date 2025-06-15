@@ -124,9 +124,9 @@ input LoginInput {
 }
 
 input RegisterInput {
+  name: String!
   email: String!
   password: String!
-  name: String!
 }
 
 input CompleteLessonInput {
