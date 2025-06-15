@@ -29,9 +29,9 @@ import { Router } from '@angular/router';
               </h1>
             </button>
 
-            <!-- Navigation -->
+            <!-- Desktop Navigation -->
             <nav class="hidden md:flex items-center space-x-8">
-              <button (click)="goHome()" class="text-white/70 hover:text-white transition-colors">
+              <button (click)="goToResources()" class="text-white/70 hover:text-white transition-colors">
                 Recursos
               </button>
               <button class="text-white font-medium border-b-2 border-purple-400">
@@ -42,8 +42,8 @@ import { Router } from '@angular/router';
               </button>
             </nav>
 
-            <!-- Auth Buttons -->
-            <div class="flex items-center space-x-4">
+            <!-- Desktop Auth Buttons -->
+            <div class="hidden md:flex items-center space-x-4">
               <button 
                 (click)="goToLogin()"
                 class="text-white/80 hover:text-white transition-colors font-medium">
@@ -54,6 +54,51 @@ import { Router } from '@angular/router';
                 class="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-2 rounded-full font-bold hover:shadow-lg transform hover:scale-105 transition-all duration-200">
                 Começar Grátis
               </button>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button 
+              (click)="toggleMenu()"
+              class="md:hidden p-2 rounded-lg bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all">
+              <mat-icon>{{ isMenuOpen ? 'close' : 'menu' }}</mat-icon>
+            </button>
+          </div>
+
+          <!-- Mobile Menu -->
+          <div class="md:hidden" [class.hidden]="!isMenuOpen">
+            <div class="bg-white/10 backdrop-blur-md rounded-2xl mt-4 p-6 border border-white/20 space-y-4">
+              <!-- Mobile Navigation Links -->
+              <button 
+                (click)="goToResources(); closeMobileMenu()"
+                class="block w-full text-left text-white/80 hover:text-white transition-colors py-3 px-4 rounded-xl hover:bg-white/10">
+                📋 Recursos
+              </button>
+              
+              <button 
+                class="block w-full text-left text-white font-medium py-3 px-4 rounded-xl bg-purple-500/20 border border-purple-400/50">
+                ❓ Como Funciona
+              </button>
+              
+              <button 
+                (click)="goToPricing(); closeMobileMenu()"
+                class="block w-full text-left text-white/80 hover:text-white transition-colors py-3 px-4 rounded-xl hover:bg-white/10">
+                💰 Preços
+              </button>
+
+              <!-- Mobile Auth Buttons -->
+              <div class="pt-4 border-t border-white/20 space-y-3">
+                <button 
+                  (click)="goToLogin(); closeMobileMenu()"
+                  class="block w-full text-center text-white/80 hover:text-white transition-colors py-3 px-4 rounded-xl border border-white/30 hover:bg-white/10">
+                  Entrar
+                </button>
+                
+                <button 
+                  (click)="goToRegister(); closeMobileMenu()"
+                  class="block w-full text-center bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 px-4 rounded-xl font-bold hover:shadow-lg transition-all">
+                  🚀 Começar Grátis
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -598,7 +643,17 @@ import { Router } from '@angular/router';
   `
 })
 export class HowItWorksComponent {
+  isMenuOpen = false;
+
   constructor(private router: Router) {}
+
+  toggleMenu() {
+    this.isMenuOpen = !this.isMenuOpen;
+  }
+
+  closeMobileMenu() {
+    this.isMenuOpen = false;
+  }
 
   goHome() {
     this.router.navigate(['/']);
@@ -614,5 +669,9 @@ export class HowItWorksComponent {
 
   goToPricing() {
     this.router.navigate(['/pricing']);
+  }
+
+  goToResources() {
+    this.router.navigate(['/resources']);
   }
 }
