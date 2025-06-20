@@ -110,12 +110,16 @@ type Query {
   me: User!
   getUnits: [Unit!]!
   getLesson(lessonId: Int!): Lesson!
+  testStripeConnection: String!
+  getStripeConfig: String!
 }
 
 type Mutation {
   login(input: LoginInput!): AuthResponse!
   register(input: RegisterInput!): AuthResponse!
   completeLesson(input: CompleteLessonInput!): LessonResult!
+  createCheckoutSession(userId: Float!, planType: String!, billingCycle: String!): String!
+  createCheckoutSessionDetailed(userId: Float!, planType: String!, billingCycle: String!): String!
 }
 
 input LoginInput {

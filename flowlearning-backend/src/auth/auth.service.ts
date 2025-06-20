@@ -36,7 +36,6 @@ export class AuthService {
         password: hashedPassword,
         name,
         totalXp: 0,
-        currentLevel: 1,
         hearts: 5,
         gems: 0,
         streak: 0,
@@ -52,7 +51,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         totalXp: user.totalXp,
-        currentLevel: user.currentLevel,
+        currentLevel: this.calculateLevel(user.totalXp),
         createdAt: user.createdAt,
       },
       token,
@@ -86,7 +85,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         totalXp: user.totalXp,
-        currentLevel: user.currentLevel,
+        currentLevel: this.calculateLevel(user.totalXp),
         createdAt: user.createdAt,
       },
       token,
@@ -103,6 +102,11 @@ export class AuthService {
     );
   }
 
+  private calculateLevel(totalXp: number): number {
+    // Fórmula: Level = floor(sqrt(totalXp / 100)) + 1
+    return Math.floor(Math.sqrt(totalXp / 100)) + 1;
+  }
+
   async getUserById(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -110,14 +114,10 @@ export class AuthService {
         id: true,
         email: true,
         name: true,
-        avatar: true,
         totalXp: true,
-        currentLevel: true,
         streak: true,
         hearts: true,
         gems: true,
-        isActive: true,
-        lastLoginAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -127,6 +127,12 @@ export class AuthService {
       throw new Error('Usuário não encontrado');
     }
 
-    return user;
+    return {
+      ...user,
+      currentLevel: this.calculateLevel(user.totalXp),
+      isActive: true,
+      avatar: null,
+      lastLoginAt: null,
+    };
   }
 }

@@ -31,7 +31,7 @@ export class LessonService {
         isLocked,
         lessons: unit.lessons.map(lesson => ({
           ...lesson,
-          isCompleted: lesson.progress.some(p => p.status === 'COMPLETED' || p.status === 'PERFECT'), // ← Adicionar PERFECT
+          isCompleted: lesson.progress.some(p => p.status === 'COMPLETED' || p.status === 'PERFECT'),
           scorePercentage: lesson.progress.length > 0 ? lesson.progress[0].scorePercentage : 0,
         })),
       };
@@ -203,17 +203,16 @@ export class LessonService {
 
     const newTotalXp = user.totalXp + xpToAdd;
     const newLevel = this.calculateLevel(newTotalXp);
+    const currentLevel = this.calculateLevel(user.totalXp);
 
     await this.prisma.user.update({
       where: { id: userId },
       data: {
         totalXp: newTotalXp,
-        currentLevel: newLevel,
-        lastLoginAt: new Date(),
       },
     });
 
-    return { newTotalXp, newLevel, levelUp: newLevel > user.currentLevel };
+    return { newTotalXp, newLevel, levelUp: newLevel > currentLevel };
   }
 
   private calculateLevel(totalXp: number): number {

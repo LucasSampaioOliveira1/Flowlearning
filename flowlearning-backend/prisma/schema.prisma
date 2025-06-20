@@ -11,26 +11,73 @@ datasource db {
 }
 
 model User {
-  id           Int       @id @default(autoincrement())
-  email        String    @unique
-  password     String
-  name         String
-  avatar       String?   // Avatar do usuário
-  totalXp      Int       @default(0)
-  currentLevel Int       @default(1)
-  streak       Int       @default(0) // Sequência de dias consecutivos
-  hearts       Int       @default(5) // Sistema de vidas (como Duolingo)
-  gems         Int       @default(0) // Moeda virtual
-  isActive     Boolean   @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id               Int          @id @default(autoincrement())
+  email            String       @unique
+  password         String
+  name             String
+  plan             PlanType     @default(FREE)
+  planExpiry       DateTime?
+  stripeCustomerId String?      @unique // Adicionar esta linha
+  hearts           Int          @default(3)
+  totalXp          Int          @default(0)
+  dailyXp          Int          @default(0)
+  streak           Int          @default(0)
+  gems             Int          @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
-  progress     UserProgress[]
-  dailyLogins  DailyLogin[]
-  achievements UserAchievement[]
+  // Relations
+  subscriptions    Subscription[]
+  progress         UserProgress[]
+  achievements     UserAchievement[]
+  dailyLogins      DailyLogin[]
 
   @@map("users")
+}
+
+// NOVO: Enum para tipos de plano
+enum PlanType {
+  FREE
+  EXPLORER
+  MASTER
+}
+
+// NOVA: Tabela para controlar assinaturas
+model Subscription {
+  id              Int      @id @default(autoincrement())
+  stripeSubscriptionId String @unique
+  plan            PlanType
+  status          SubscriptionStatus
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  TRIALING
+}
+
+// NOVA: Tabela para definir features por plano
+model PlanFeature {
+  id          Int      @id @default(autoincrement())
+  plan        PlanType
+  feature     String   // ex: "max_daily_xp", "hearts_count", "access_all_units"
+  value       String   // ex: "unlimited", "5", "true"
+  createdAt   DateTime @default(now())
+
+  @@unique([plan, feature])
+  @@map("plan_features")
 }
 
 model Unit {
@@ -40,6 +87,10 @@ model Unit {
   order       Int     @unique // Para garantir ordem única
   color       String  @default("#3B82F6") // Cor hex padrão
   icon        String? // Ícone da unidade
+  
+  // NOVO: Controle de acesso por plano
+  requiredPlan PlanType @default(FREE) // Plano mínimo necessário
+  
   isActive    Boolean @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -138,6 +189,10 @@ model Achievement {
   target      Int      // Meta para conquistar (ex: 7 para 7 dias de streak)
   xpReward    Int      @default(0)
   gemsReward  Int      @default(0)
+  
+  // NOVO: Conquistas exclusivas por plano
+  requiredPlan PlanType @default(FREE)
+  
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
