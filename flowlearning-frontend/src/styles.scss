@@ -25,3 +25,19 @@
 .gems-display {
   @apply bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold;
 }
+
+/* Custom snackbar styles */
+.success-snackbar {
+  background-color: #22c55e !important;
+  color: white !important;
+}
+
+.error-snackbar {
+  background-color: #ef4444 !important;
+  color: white !important;
+}
+
+.info-snackbar {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}

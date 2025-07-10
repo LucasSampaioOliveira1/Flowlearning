@@ -30,6 +30,14 @@ export const routes: Routes = [
     loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
   },
   {
+    path: 'payment-success',
+    loadComponent: () => import('./features/payment-success/payment-success.component').then(m => m.PaymentSuccessComponent)
+  },
+  {
+    path: 'payment-cancelled',
+    loadComponent: () => import('./features/payment-cancelled/payment-cancelled.component').then(m => m.PaymentCancelledComponent)
+  },
+  {
     path: '**',
     redirectTo: '/'
   }

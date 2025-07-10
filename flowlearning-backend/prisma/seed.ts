@@ -66,7 +66,7 @@ async function main() {
   const freeUser = await prisma.user.create({
     data: {
       email: 'free@flowlearning.com',
-      password: '$2b$10$YourHashedPasswordHere',
+      password: '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // senha: password
       name: 'Usuário Free',
       plan: 'FREE',
       hearts: 3,
@@ -76,7 +76,7 @@ async function main() {
   const explorerUser = await prisma.user.create({
     data: {
       email: 'explorer@flowlearning.com',
-      password: '$2b$10$YourHashedPasswordHere',
+      password: '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // senha: password
       name: 'Usuário Explorer',
       plan: 'EXPLORER',
       hearts: 5,
@@ -87,7 +87,7 @@ async function main() {
   const masterUser = await prisma.user.create({
     data: {
       email: 'master@flowlearning.com',
-      password: '$2b$10$YourHashedPasswordHere',
+      password: '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // senha: password
       name: 'Usuário Master',
       plan: 'MASTER',
       hearts: 999,

@@ -3,7 +3,11 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
+import { StripeService } from '../../core/services/stripe.service';
+import { AuthService } from '../auth/auth.service';
 
 @Component({
   selector: 'app-pricing',
@@ -12,7 +16,9 @@ import { Router } from '@angular/router';
     CommonModule,
     MatButtonModule,
     MatIconModule,
-    MatCardModule
+    MatCardModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule
   ],
   styles: [`
     .check-icon {
@@ -202,32 +208,33 @@ import { Router } from '@angular/router';
 
               <button 
                 (click)="selectPlan('free')"
-                class="w-full bg-white/20 hover:bg-white/30 text-white font-bold py-3 md:py-4 px-6 rounded-2xl transition-all duration-300 border border-white/30 text-sm md:text-base">
-                Começar Grátis
+                [disabled]="isProcessingPayment"
+                class="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white font-bold py-3 md:py-4 px-6 rounded-xl hover:from-gray-500 hover:to-gray-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                {{ isProcessingPayment ? 'Processando...' : '✨ Começar Grátis' }}
               </button>
             </div>
 
-            <!-- Plano EXPLORADOR (Mais Popular) -->
-            <div class="relative bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-md rounded-3xl p-6 md:p-8 border-2 border-purple-400 hover:border-purple-300 transition-all duration-300 transform md:scale-105">
-              <!-- Badge "Mais Popular" -->
-              <div class="absolute -top-3 md:-top-4 left-1/2 transform -translate-x-1/2">
-                <div class="bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-4 md:px-6 py-1 md:py-2 rounded-full text-xs md:text-sm font-bold">
-                  ⭐ MAIS POPULAR
+            <!-- Plano EXPLORADOR -->
+            <div class="relative bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 border-2 border-purple-500 hover:border-purple-400 transition-all duration-300 scale-105 lg:scale-110">
+              <!-- Badge Mais Popular -->
+              <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                <div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg">
+                  🔥 MAIS POPULAR
                 </div>
               </div>
 
-              <div class="text-center mb-6 md:mb-8 mt-2 md:mt-4">
-                <div class="text-4xl md:text-5xl mb-4">⭐</div>
+              <div class="text-center mb-6 md:mb-8 mt-4">
+                <div class="text-4xl md:text-5xl mb-4">🚀</div>
                 <h3 class="text-xl md:text-2xl font-bold text-white mb-2">EXPLORADOR</h3>
-                <p class="text-white/60 mb-4 md:mb-6 text-sm md:text-base">Ideal para estudantes dedicados</p>
+                <p class="text-white/60 mb-4 md:mb-6 text-sm md:text-base">Para quem quer acelerar os estudos</p>
                 <div class="flex items-center justify-center mb-4">
                   <span class="text-3xl md:text-4xl font-bold text-white">
-                    R$ {{ isAnnual ? '8' : '10' }}
+                    R$ {{ getExplorerPrice() }}
                   </span>
-                  <span class="text-white/60 ml-2 text-sm md:text-base">/mês</span>
+                  <span class="text-white/60 ml-2 text-sm md:text-base">{{ isAnnual ? '/ano' : '/mês' }}</span>
                 </div>
-                <p class="text-purple-400 text-xs md:text-sm" *ngIf="isAnnual">💰 Economize R$ 24/ano</p>
-                <p class="text-white/60 text-xs md:text-sm" *ngIf="!isAnnual">Ou R$ 96/ano</p>
+                <p class="text-purple-400 text-sm" *ngIf="isAnnual">💰 Economize R$ {{ getExplorerSavings() }} por ano</p>
+                <p class="text-purple-400 text-sm" *ngIf="!isAnnual">🎯 Comece sua evolução</p>
               </div>
 
               <!-- Features -->
@@ -236,179 +243,121 @@ import { Router } from '@angular/router';
                   <div class="w-5 h-5 bg-purple-400 rounded-full flex items-center justify-center flex-shrink-0">
                     <mat-icon class="check-icon text-white">check</mat-icon>
                   </div>
-                  <span class="text-white text-sm md:text-base">Acesso completo a todas unidades</span>
+                  <span class="text-white/80 text-sm md:text-base">5 unidades de conteúdo</span>
                 </div>
                 <div class="flex items-center space-x-3">
                   <div class="w-5 h-5 bg-purple-400 rounded-full flex items-center justify-center flex-shrink-0">
                     <mat-icon class="check-icon text-white">check</mat-icon>
                   </div>
-                  <span class="text-white text-sm md:text-base">XP ilimitado por dia</span>
+                  <span class="text-white/80 text-sm md:text-base">150 XP máximo por dia</span>
                 </div>
                 <div class="flex items-center space-x-3">
                   <div class="w-5 h-5 bg-purple-400 rounded-full flex items-center justify-center flex-shrink-0">
                     <mat-icon class="check-icon text-white">check</mat-icon>
                   </div>
-                  <span class="text-white text-sm md:text-base">5 vidas + reposição automática</span>
+                  <span class="text-white/80 text-sm md:text-base">5 vidas (hearts)</span>
                 </div>
                 <div class="flex items-center space-x-3">
                   <div class="w-5 h-5 bg-purple-400 rounded-full flex items-center justify-center flex-shrink-0">
                     <mat-icon class="check-icon text-white">check</mat-icon>
                   </div>
-                  <span class="text-white text-sm md:text-base">Streak freeze (3x/mês)</span>
+                  <span class="text-white/80 text-sm md:text-base">Sem anúncios</span>
                 </div>
                 <div class="flex items-center space-x-3">
                   <div class="w-5 h-5 bg-purple-400 rounded-full flex items-center justify-center flex-shrink-0">
                     <mat-icon class="check-icon text-white">check</mat-icon>
                   </div>
-                  <span class="text-white text-sm md:text-base">Relatórios de progresso</span>
-                </div>
-                <div class="flex items-center space-x-3">
-                  <div class="w-5 h-5 bg-purple-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <mat-icon class="check-icon text-white">check</mat-icon>
-                  </div>
-                  <span class="text-white text-sm md:text-base">Conquistas exclusivas</span>
-                </div>
-                <div class="flex items-center space-x-3">
-                  <div class="w-5 h-5 bg-purple-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <mat-icon class="check-icon text-white">check</mat-icon>
-                  </div>
-                  <span class="text-white text-sm md:text-base">Suporte prioritário</span>
+                  <span class="text-white/80 text-sm md:text-base">Relatórios detalhados</span>
                 </div>
               </div>
 
               <button 
                 (click)="selectPlan('explorer')"
-                class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 md:py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-xl text-sm md:text-base">
-                Escolher Explorador
+                [disabled]="isProcessingPayment"
+                class="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold py-3 md:py-4 px-6 rounded-xl hover:from-purple-400 hover:to-pink-500 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                <mat-spinner *ngIf="isProcessingPayment && currentPlan === 'explorer'" diameter="20" class="mr-2"></mat-spinner>
+                {{ (isProcessingPayment && currentPlan === 'explorer') ? 'Redirecionando...' : '🚀 Escolher Explorador' }}
               </button>
             </div>
 
             <!-- Plano MESTRE -->
-            <div class="relative bg-gradient-to-br from-yellow-600/20 to-orange-600/20 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-yellow-400/50 hover:border-yellow-400 transition-all duration-300">
+            <div class="relative bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/20 hover:border-yellow-400 transition-all duration-300">
               <div class="text-center mb-6 md:mb-8">
-                <div class="text-4xl md:text-5xl mb-4">🔥</div>
+                <div class="text-4xl md:text-5xl mb-4">👑</div>
                 <h3 class="text-xl md:text-2xl font-bold text-white mb-2">MESTRE</h3>
-                <p class="text-white/60 mb-4 md:mb-6 text-sm md:text-base">Para verdadeiros especialistas</p>
+                <p class="text-white/60 mb-4 md:mb-6 text-sm md:text-base">Para estudantes dedicados</p>
                 <div class="flex items-center justify-center mb-4">
                   <span class="text-3xl md:text-4xl font-bold text-white">
-                    R$ {{ isAnnual ? '20' : '25' }}
+                    R$ {{ getMasterPrice() }}
                   </span>
-                  <span class="text-white/60 ml-2 text-sm md:text-base">/mês</span>
+                  <span class="text-white/60 ml-2 text-sm md:text-base">{{ isAnnual ? '/ano' : '/mês' }}</span>
                 </div>
-                <p class="text-yellow-400 text-xs md:text-sm" *ngIf="isAnnual">💰 Economize R$ 60/ano</p>
-                <p class="text-white/60 text-xs md:text-sm" *ngIf="!isAnnual">Ou R$ 240/ano</p>
+                <p class="text-yellow-400 text-sm" *ngIf="isAnnual">👑 Economize R$ {{ getMasterSavings() }} por ano</p>
+                <p class="text-yellow-400 text-sm" *ngIf="!isAnnual">⚡ Máxima performance</p>
               </div>
 
               <!-- Features -->
               <div class="space-y-3 md:space-y-4 mb-6 md:mb-8">
                 <div class="flex items-center space-x-3">
                   <div class="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <mat-icon class="check-icon text-black">check</mat-icon>
+                    <mat-icon class="check-icon text-white">check</mat-icon>
                   </div>
-                  <span class="text-white text-sm md:text-base">Tudo do Explorador +</span>
+                  <span class="text-white/80 text-sm md:text-base">Todas as unidades</span>
                 </div>
                 <div class="flex items-center space-x-3">
                   <div class="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <mat-icon class="check-icon text-black">check</mat-icon>
+                    <mat-icon class="check-icon text-white">check</mat-icon>
                   </div>
-                  <span class="text-white text-sm md:text-base">IA Personalizada</span>
+                  <span class="text-white/80 text-sm md:text-base">XP ilimitado</span>
                 </div>
                 <div class="flex items-center space-x-3">
                   <div class="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <mat-icon class="check-icon text-black">check</mat-icon>
+                    <mat-icon class="check-icon text-white">check</mat-icon>
                   </div>
-                  <span class="text-white text-sm md:text-base">Vidas infinitas</span>
+                  <span class="text-white/80 text-sm md:text-base">Vidas ilimitadas</span>
                 </div>
                 <div class="flex items-center space-x-3">
                   <div class="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <mat-icon class="check-icon text-black">check</mat-icon>
+                    <mat-icon class="check-icon text-white">check</mat-icon>
                   </div>
-                  <span class="text-white text-sm md:text-base">Streak freeze ilimitado</span>
+                  <span class="text-white/80 text-sm md:text-base">Suporte prioritário</span>
                 </div>
                 <div class="flex items-center space-x-3">
                   <div class="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <mat-icon class="check-icon text-black">check</mat-icon>
+                    <mat-icon class="check-icon text-white">check</mat-icon>
                   </div>
-                  <span class="text-white text-sm md:text-base">Conteúdo exclusivo</span>
-                </div>
-                <div class="flex items-center space-x-3">
-                  <div class="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <mat-icon class="check-icon text-black">check</mat-icon>
-                  </div>
-                  <span class="text-white text-sm md:text-base">Certificados oficiais</span>
-                </div>
-                <div class="flex items-center space-x-3">
-                  <div class="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <mat-icon class="check-icon text-black">check</mat-icon>
-                  </div>
-                  <span class="text-white text-sm md:text-base">Relatórios de Performance com IA</span>
-                </div>
-                <div class="flex items-center space-x-3">
-                  <div class="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <mat-icon class="check-icon text-black">check</mat-icon>
-                  </div>
-                  <span class="text-white text-sm md:text-base">Badge especial no perfil</span>
+                  <span class="text-white/80 text-sm md:text-base">Acesso antecipado</span>
                 </div>
               </div>
 
               <button 
                 (click)="selectPlan('master')"
-                class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-bold py-3 md:py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-xl text-sm md:text-base">
-                Escolher Mestre
+                [disabled]="isProcessingPayment"
+                class="w-full bg-gradient-to-r from-yellow-500 to-orange-600 text-white font-bold py-3 md:py-4 px-6 rounded-xl hover:from-yellow-400 hover:to-orange-500 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                <mat-spinner *ngIf="isProcessingPayment && currentPlan === 'master'" diameter="20" class="mr-2"></mat-spinner>
+                {{ (isProcessingPayment && currentPlan === 'master') ? 'Redirecionando...' : '👑 Escolher Mestre' }}
               </button>
             </div>
+
           </div>
         </div>
       </section>
 
-      <!-- FAQ Section -->
-      <section class="py-16 md:py-20 bg-white/5 backdrop-blur-sm">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="text-center mb-12 md:mb-16">
-            <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-              Perguntas Frequentes 🤔
-            </h2>
-            <p class="text-white/60 text-sm md:text-base">
-              Tire suas dúvidas sobre nossos planos
-            </p>
-          </div>
-
-          <div class="space-y-4 md:space-y-6">
-            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 border border-white/20">
-              <h3 class="text-base md:text-lg font-bold text-white mb-2">Posso cancelar a qualquer momento?</h3>
-              <p class="text-white/70 text-sm md:text-base">Sim! Você pode cancelar sua assinatura a qualquer momento sem taxas adicionais.</p>
-            </div>
-
-            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 border border-white/20">
-              <h3 class="text-base md:text-lg font-bold text-white mb-2">O que acontece com meu progresso se eu cancelar?</h3>
-              <p class="text-white/70 text-sm md:text-base">Seu progresso será mantido e você voltará ao plano gratuito automaticamente.</p>
-            </div>
-
-            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 border border-white/20">
-              <h3 class="text-base md:text-lg font-bold text-white mb-2">Posso trocar de plano depois?</h3>
-              <p class="text-white/70 text-sm md:text-base">Claro! Você pode fazer upgrade ou downgrade do seu plano a qualquer momento.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- CTA Final -->
+      <!-- CTA Section -->
       <section class="py-16 md:py-20">
-        <div class="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <div class="bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-md rounded-3xl p-8 md:p-12 border border-white/30">
-            <div class="text-5xl md:text-6xl mb-6 animate-bounce">🚀</div>
-            <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-              Pronto para começar?
-            </h2>
-            <p class="text-lg md:text-xl text-white/80 mb-8">
-              Junte-se a milhares de estudantes que já transformaram seus estudos!
-            </p>
-            <button 
-              (click)="goToRegister()"
-              class="bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white font-bold py-4 md:py-6 px-8 md:px-12 rounded-full text-lg md:text-xl hover:shadow-2xl transform hover:scale-110 transition-all duration-300">
-              🎯 Começar Jornada Grátis
-            </button>
-          </div>
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div class="text-4xl md:text-5xl mb-6">🎯</div>
+          <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+            Pronto para começar?
+          </h2>
+          <p class="text-lg md:text-xl text-white/80 mb-8">
+            Junte-se a milhares de estudantes que já transformaram seus estudos!
+          </p>
+          <button 
+            (click)="goToRegister()"
+            class="bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white font-bold py-4 md:py-6 px-8 md:px-12 rounded-full text-lg md:text-xl hover:shadow-2xl transform hover:scale-110 transition-all duration-300">
+            🎯 Começar Jornada Grátis
+          </button>
         </div>
       </section>
     </div>
@@ -417,8 +366,21 @@ import { Router } from '@angular/router';
 export class PricingComponent {
   isAnnual = false;
   isMobileMenuOpen = false;
+  isProcessingPayment = false;
+  currentPlan: string | null = null;
 
-  constructor(private router: Router) {}
+  // Preços definidos
+  private readonly EXPLORER_MONTHLY = 10;
+  private readonly EXPLORER_YEARLY = 96;
+  private readonly MASTER_MONTHLY = 25;
+  private readonly MASTER_YEARLY = 240;
+
+  constructor(
+    private router: Router,
+    private stripeService: StripeService,
+    private authService: AuthService,
+    private snackBar: MatSnackBar
+  ) {}
 
   toggleBilling() {
     this.isAnnual = !this.isAnnual;
@@ -432,14 +394,101 @@ export class PricingComponent {
     this.isMobileMenuOpen = false;
   }
 
+  // Métodos para calcular preços
+  getExplorerPrice(): string {
+    if (this.isAnnual) {
+      return this.EXPLORER_YEARLY.toString(); // R$ 96 (valor total anual)
+    }
+    return this.EXPLORER_MONTHLY.toString(); // R$ 10/mês
+  }
+
+  getMasterPrice(): string {
+    if (this.isAnnual) {
+      return this.MASTER_YEARLY.toString(); // R$ 240 (valor total anual)
+    }
+    return this.MASTER_MONTHLY.toString(); // R$ 25/mês
+  }
+
+  getExplorerSavings(): string {
+    const yearlyTotal = this.EXPLORER_MONTHLY * 12; // 10 * 12 = 120
+    const savings = yearlyTotal - this.EXPLORER_YEARLY; // 120 - 96 = 24
+    return savings.toString();
+  }
+
+  getMasterSavings(): string {
+    const yearlyTotal = this.MASTER_MONTHLY * 12; // 25 * 12 = 300
+    const savings = yearlyTotal - this.MASTER_YEARLY; // 300 - 240 = 60
+    return savings.toString();
+  }
+
   selectPlan(plan: string) {
     if (plan === 'free') {
       this.router.navigate(['/register']);
-    } else {
-      // Aqui vamos implementar a integração com pagamento
-      console.log(`Selecionado plano: ${plan}`);
-      this.router.navigate(['/checkout'], { queryParams: { plan, annual: this.isAnnual } });
+      return;
     }
+
+    // Verificar se o usuário está logado
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) {
+      this.snackBar.open('Você precisa estar logado para assinar um plano', 'Fechar', {
+        duration: 5000,
+        panelClass: ['error-snackbar']
+      });
+      this.router.navigate(['/login'], { 
+        queryParams: { 
+          returnUrl: '/pricing',
+          plan: plan.toUpperCase(),
+          billing: this.isAnnual ? 'yearly' : 'monthly'
+        } 
+      });
+      return;
+    }
+
+    this.processPayment(plan.toUpperCase() as 'EXPLORER' | 'MASTER');
+  }
+
+  private processPayment(planType: 'EXPLORER' | 'MASTER') {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) {
+      this.snackBar.open('Erro: usuário não encontrado', 'Fechar', {
+        duration: 5000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    this.isProcessingPayment = true;
+    this.currentPlan = planType.toLowerCase();
+
+    const billingCycle = this.isAnnual ? 'yearly' : 'monthly';
+
+    this.stripeService.createCheckoutSession(currentUser.id, planType, billingCycle)
+      .subscribe({
+        next: (checkoutUrl) => {
+          this.snackBar.open('Redirecionando para o pagamento...', 'Fechar', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+          
+          // Redirecionar após um pequeno delay para melhor UX
+          setTimeout(() => {
+            this.stripeService.redirectToCheckout(checkoutUrl);
+          }, 1000);
+        },
+        error: (error) => {
+          console.error('Erro ao criar sessão de checkout:', error);
+          this.snackBar.open(
+            error.message || 'Erro ao processar pagamento. Tente novamente.', 
+            'Fechar', 
+            {
+              duration: 5000,
+              panelClass: ['error-snackbar']
+            }
+          );
+          this.isProcessingPayment = false;
+          this.currentPlan = null;
+        }
+      });
   }
 
   goHome() {

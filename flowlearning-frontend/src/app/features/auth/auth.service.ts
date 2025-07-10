@@ -1,25 +1,51 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
-import { Apollo } from 'apollo-angular';
-import { gql } from 'apollo-angular';
-import { map, catchError } from 'rxjs/operators';
+import { Apollo, gql } from 'apollo-angular';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { Router } from '@angular/router';
 
 export interface User {
   id: number;
-  name: string;
   email: string;
-  totalXp: number;
-  currentLevel: number;
+  name: string;
+  createdAt: string;
+  // Campos opcionais (podem não vir do AuthUser)
+  totalXp?: number;
+  currentLevel?: number;
   hearts?: number;
   gems?: number;
   streak?: number;
-  createdAt?: string;
+  plan?: 'FREE' | 'EXPLORER' | 'MASTER';
+  planExpiry?: string;
 }
 
-export interface AuthResponse {
-  user: User;
-  token: string;
-}
+const LOGIN_MUTATION = gql`
+  mutation Login($input: LoginInput!) {
+    login(input: $input) {
+      user {
+        id
+        email
+        name
+        createdAt
+      }
+      token
+    }
+  }
+`;
+
+const REGISTER_MUTATION = gql`
+  mutation Register($input: RegisterInput!) {
+    register(input: $input) {
+      user {
+        id
+        email
+        name
+        createdAt
+      }
+      token
+    }
+  }
+`;
 
 @Injectable({
   providedIn: 'root'
@@ -27,170 +53,155 @@ export interface AuthResponse {
 export class AuthService {
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
-  
-  private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
-  public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
-  // Mutations GraphQL
-  private LOGIN_MUTATION = gql`
-    mutation Login($input: LoginInput!) {
-      login(input: $input) {
-        user {
-          id
-          name
-          email
-          totalXp
-          currentLevel
-          createdAt
-        }
-        token
-      }
-    }
-  `;
-
-  private REGISTER_MUTATION = gql`
-    mutation Register($input: RegisterInput!) {
-      register(input: $input) {
-        user {
-          id
-          name
-          email
-          totalXp
-          currentLevel
-          createdAt
-        }
-        token
-      }
-    }
-  `;
-
-  constructor(private apollo: Apollo) {
-    this.checkStoredAuth();
+  constructor(
+    private apollo: Apollo,
+    private router: Router
+  ) {
+    this.loadUserFromStorage();
   }
 
-  private checkStoredAuth() {
+  private loadUserFromStorage() {
     const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
+    const userData = localStorage.getItem('user');
     
-    if (token && user) {
-      this.currentUserSubject.next(JSON.parse(user));
-      this.isAuthenticatedSubject.next(true);
+    if (token && userData) {
+      try {
+        const user = JSON.parse(userData);
+        this.currentUserSubject.next(user);
+      } catch (error) {
+        console.error('Erro ao carregar usuário do storage:', error);
+        this.logout();
+      }
     }
   }
 
-  // LOGIN com GraphQL + fallback
-  login(email: string, password: string): Observable<AuthResponse> {
-    console.log('🚀 LOGIN: Tentando autenticação com GraphQL para:', email);
-    
-    return this.apollo.mutate<{ login: AuthResponse }>({
-      mutation: this.LOGIN_MUTATION,
-      variables: { input: { email, password } }
+  login(email: string, password: string): Observable<{ user: User; token: string }> {
+    return this.apollo.mutate<{ login: { user: User; token: string } }>({
+      mutation: LOGIN_MUTATION,
+      variables: { 
+        input: { 
+          email, 
+          password 
+        } 
+      }
     }).pipe(
       map(result => {
-        console.log('✅ LOGIN: Sucesso GraphQL!', result);
-        const authResponse = result.data?.login;
-        if (authResponse) {
-          this.setSession(authResponse);
-          return authResponse;
+        if (result.data?.login) {
+          const { user, token } = result.data.login;
+          
+          // Adicionar campos padrão se não existirem
+          const completeUser = {
+            ...user,
+            totalXp: user.totalXp || 0,
+            currentLevel: user.currentLevel || 1,
+            hearts: user.hearts || 5,
+            gems: user.gems || 0,
+            streak: user.streak || 0,
+            plan: user.plan || 'FREE' as 'FREE'
+          };
+          
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(completeUser));
+          
+          this.currentUserSubject.next(completeUser);
+          
+          return { user: completeUser, token };
         }
-        throw new Error('Login falhou - dados não retornados');
-      }),
-      catchError(error => {
-        console.error('❌ LOGIN: Erro GraphQL:', error);
-        console.warn('🔄 LOGIN: Usando fallback mock');
-        return this.mockLogin(email, password);
+        throw new Error('Falha no login');
       })
     );
   }
 
-  // REGISTER com GraphQL + fallback
-  register(name: string, email: string, password: string): Observable<AuthResponse> {
-    console.log('🚀 REGISTER: Tentando cadastro com GraphQL para:', email);
-    
-    return this.apollo.mutate<{ register: AuthResponse }>({
-      mutation: this.REGISTER_MUTATION,
-      variables: { input: { name, email, password } }
+  register(email: string, password: string, name: string): Observable<{ user: User; token: string }> {
+    return this.apollo.mutate<{ register: { user: User; token: string } }>({
+      mutation: REGISTER_MUTATION,
+      variables: { 
+        input: { 
+          email, 
+          password, 
+          name 
+        } 
+      }
     }).pipe(
       map(result => {
-        console.log('✅ REGISTER: Sucesso GraphQL!', result);
-        const authResponse = result.data?.register;
-        if (authResponse) {
-          this.setSession(authResponse);
-          return authResponse;
+        if (result.data?.register) {
+          const { user, token } = result.data.register;
+          
+          const completeUser = {
+            ...user,
+            totalXp: user.totalXp || 0,
+            currentLevel: user.currentLevel || 1,
+            hearts: user.hearts || 5,
+            gems: user.gems || 0,
+            streak: user.streak || 0,
+            plan: user.plan || 'FREE' as 'FREE'
+          };
+          
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(completeUser));
+          
+          this.currentUserSubject.next(completeUser);
+          
+          return { user: completeUser, token };
         }
-        throw new Error('Registro falhou - dados não retornados');
-      }),
-      catchError(error => {
-        console.error('❌ REGISTER: Erro GraphQL:', error);
-        console.warn('🔄 REGISTER: Usando fallback mock');
-        return this.mockRegister(name, email, password);
+        throw new Error('Falha no registro');
       })
     );
-  }
-
-  // Fallback methods
-  private mockLogin(email: string, password: string): Observable<AuthResponse> {
-    const mockUser: User = {
-      id: 999,
-      name: 'Mock User (Login)',
-      email: email,
-      totalXp: 150,
-      currentLevel: 2,
-      hearts: 5,
-      gems: 50,
-      streak: 3
-    };
-
-    const mockResponse: AuthResponse = {
-      user: mockUser,
-      token: 'mock-jwt-token-login'
-    };
-
-    this.setSession(mockResponse);
-    return of(mockResponse);
-  }
-
-  private mockRegister(name: string, email: string, password: string): Observable<AuthResponse> {
-    const mockUser: User = {
-      id: 998,
-      name: name,
-      email: email,
-      totalXp: 0,
-      currentLevel: 1,
-      hearts: 5,
-      gems: 0,
-      streak: 0
-    };
-
-    const mockResponse: AuthResponse = {
-      user: mockUser,
-      token: 'mock-jwt-token-register'
-    };
-
-    this.setSession(mockResponse);
-    return of(mockResponse);
-  }
-
-  private setSession(authResult: AuthResponse) {
-    localStorage.setItem('token', authResult.token);
-    localStorage.setItem('user', JSON.stringify(authResult.user));
-    this.currentUserSubject.next(authResult.user);
-    this.isAuthenticatedSubject.next(true);
   }
 
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     this.currentUserSubject.next(null);
-    this.isAuthenticatedSubject.next(false);
+    this.router.navigate(['/']);
   }
 
   getCurrentUser(): User | null {
     return this.currentUserSubject.value;
   }
 
-  updateUser(user: User) {
-    localStorage.setItem('user', JSON.stringify(user));
-    this.currentUserSubject.next(user);
+  isLoggedIn(): boolean {
+    return !!this.getCurrentUser();
+  }
+
+  getUserPlan(): 'FREE' | 'EXPLORER' | 'MASTER' {
+    const user = this.getCurrentUser();
+    return user?.plan || 'FREE';
+  }
+
+  isPlanActive(): boolean {
+    const user = this.getCurrentUser();
+    if (!user?.planExpiry) return user?.plan === 'FREE';
+    
+    const expiryDate = new Date(user.planExpiry);
+    return expiryDate > new Date();
+  }
+
+  getPlanBadgeInfo() {
+    const plan = this.getUserPlan();
+    
+    const planInfo = {
+      'FREE': {
+        name: 'Descobridor',
+        color: 'bg-gray-500',
+        icon: '🆓',
+        textColor: 'text-gray-100'
+      },
+      'EXPLORER': {
+        name: 'Explorador',
+        color: 'bg-purple-500',
+        icon: '⭐',
+        textColor: 'text-purple-100'
+      },
+      'MASTER': {
+        name: 'Mestre',
+        color: 'bg-yellow-500',
+        icon: '🔥',
+        textColor: 'text-yellow-100'
+      }
+    };
+
+    return planInfo[plan];
   }
 }
